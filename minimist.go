@@ -143,12 +143,12 @@ func (o *Options) Alias(from string, to ...string) *Options {
 }
 
 // Parse parses os.Args excluding os.Args[0].
-func Parse() *argv {
-	return parseArgs(os.Args[1:], nil)
+func Parse() *ArgMap {
+	return ParseArgv(os.Args[1:], nil)
 }
 
-// ParseArgs parses an argv for options.
-func parseArgs(argv []string, options *Options) *argv {
+// ParseArgv parses an argv for options.
+func ParseArgv(argv []string, options *Options) *ArgMap {
 	if options == nil {
 		options = &Options{}
 	}
@@ -163,7 +163,8 @@ func parseArgs(argv []string, options *Options) *argv {
 
 	leftover := []interface{}{}
 	result := map[string]interface{}{
-		"_": leftover,
+		"_":  leftover,
+		"--": []string{},
 	}
 
 	setArg := func(key string, val interface{}) {
