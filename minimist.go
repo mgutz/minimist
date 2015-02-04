@@ -1,25 +1,13 @@
 package minimist
 
 import (
+	"os"
 	"regexp"
 	//"strings"
 	"strconv"
 
 	"github.com/mgutz/str"
 )
-
-// Args is the result of parsing command-line arguments.
-type Args map[string]interface{}
-
-// Leftover are arguments which were not parsed as flags before "--"
-func (a Args) Leftover() []interface{} {
-	return a["_"].([]interface{})
-}
-
-// Unparsed are args that came after "--"
-func (a Args) Unparsed() []string {
-	return a["--"].([]string)
-}
 
 func nextString(list []string, i int) *string {
 	if i+1 < len(list) {
@@ -29,6 +17,9 @@ func nextString(list []string, i int) *string {
 }
 
 func sliceContains(strings []string, needle string) bool {
+	if strings == nil {
+		return false
+	}
 	for _, s := range strings {
 		if s == needle {
 			return true
@@ -121,17 +112,50 @@ func parseNumber(v interface{}) interface{} {
 	return toFloat64(v)
 }
 
-func parseArgs(args, bools, strings []string, defaults map[string]interface{}) Args {
-	if bools == nil {
-		bools = []string{}
+// Options are parse options.
+type Options struct {
+	// Bools are flags which should always be treated as bool
+	Bools []string
+	// Strings are flags which should always be treated as string
+	Strings []string
+	// Defaults are default values for flags.
+	Defaults map[string]interface{}
+	// Aliases are aliases for a flag
+	Aliases map[string][]string
+}
+
+// NewOptions creates an instance of Options.
+func NewOptions() *Options {
+	return &Options{}
+}
+
+// Alias adds an alias.
+func (o *Options) Alias(from string, to ...string) *Options {
+	if len(to) == 0 {
+		return o
 	}
 
-	if strings == nil {
-		strings = []string{}
+	if o.Aliases == nil {
+		o.Aliases = map[string][]string{}
 	}
-	if defaults == nil {
-		defaults = map[string]interface{}{}
+	o.Aliases[from] = to
+	return o
+}
+
+// Parse parses os.Args excluding os.Args[0].
+func Parse() *argv {
+	return parseArgs(os.Args[1:], nil)
+}
+
+// ParseArgs parses an argv for options.
+func parseArgs(argv []string, options *Options) *argv {
+	if options == nil {
+		options = &Options{}
 	}
+	bools := options.Bools
+	strings := options.Strings
+	defaults := options.Defaults
+	aliases := options.Aliases
 
 	inBools := func(key string) bool {
 		return sliceContains(bools, key)
@@ -143,11 +167,25 @@ func parseArgs(args, bools, strings []string, defaults map[string]interface{}) A
 	}
 
 	setArg := func(key string, val interface{}) {
-		if !sliceContains(strings, key) && isNumber(val) {
-			result[key] = parseNumber(val)
-			return
+		var keys []string
+		if aliases != nil {
+			if aka := aliases[key]; aka != nil {
+				keys = append(aka, key)
+			}
 		}
-		result[key] = val
+
+		if keys == nil {
+			keys = []string{key}
+		}
+
+		for _, keyName := range keys {
+			if !sliceContains(strings, keyName) && isNumber(val) {
+				result[keyName] = parseNumber(val)
+				continue
+			}
+			result[keyName] = val
+		}
+
 	}
 
 	iifInStrings := func(key string, s string, v interface{}) interface{} {
@@ -157,20 +195,20 @@ func parseArgs(args, bools, strings []string, defaults map[string]interface{}) A
 		return v
 	}
 
-	l := len(args)
+	l := len(argv)
 	argsAt := func(i int) string {
 		if i > -1 && i < l {
-			return args[i]
+			return argv[i]
 		}
 		return ""
 	}
 
 	i := 0
-	for i < len(args) {
-		arg := args[i]
+	for i < len(argv) {
+		arg := argv[i]
 
 		if arg == "--" {
-			result["--"] = args[i+1:]
+			result["--"] = argv[i+1:]
 			break
 		}
 
@@ -254,12 +292,12 @@ func parseArgs(args, bools, strings []string, defaults map[string]interface{}) A
 			key := argAt(len(arg) - 1)
 			if !broken && key != "-" {
 
-				if i+1 < len(args) {
-					nextArg := args[i+1]
+				if i+1 < len(argv) {
+					nextArg := argv[i+1]
 					if !dashesRe.MatchString(nextArg) && !inBools(key) {
 						setArg(key, nextArg)
 						i++
-					} else if trueFalseRe.MatchString(args[i+1]) {
+					} else if trueFalseRe.MatchString(argv[i+1]) {
 						setArg(key, nextArg == "true")
 						i++
 					}
@@ -279,11 +317,13 @@ func parseArgs(args, bools, strings []string, defaults map[string]interface{}) A
 		i++
 	}
 
-	for key := range defaults {
-		if result[key] == nil {
-			setArg(key, defaults[key])
+	if defaults != nil {
+		for key := range defaults {
+			if result[key] == nil {
+				setArg(key, defaults[key])
+			}
 		}
 	}
 
-	return result
+	return newFromMap(result)
 }
