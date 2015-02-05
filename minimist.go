@@ -4,9 +4,6 @@ import (
 	"os"
 	"regexp"
 	//"strings"
-	"strconv"
-
-	"github.com/mgutz/str"
 )
 
 func nextString(list []string, i int) *string {
@@ -56,143 +53,22 @@ var dashesRe = regexp.MustCompile(`^(-|--)`)
 
 var trueFalseRe = regexp.MustCompile(`^(true|false)`)
 
-func isNumber(v interface{}) bool {
-	return isInteger(v) || isFloat(v)
-}
-
-func isFloat(v interface{}) bool {
-	switch t := v.(type) {
-	case float64, float32:
-		return true
-	case string:
-		return numberRe.MatchString(t)
-	default:
-		return false
-	}
-}
-
-func toFloat64(v interface{}) float64 {
-	switch t := v.(type) {
-	case float64, float32:
-		return t.(float64)
-	case string:
-		val, _ := strconv.ParseFloat(t, 64)
-		return val
-	default:
-		return 0
-	}
-}
-
-func isInteger(v interface{}) bool {
-	switch t := v.(type) {
-	case int32, int64, uint, uint32, uint64:
-		return true
-	case string:
-		return integerRe.MatchString(t)
-	default:
-		return false
-	}
-}
-func toInt(v interface{}) int {
-	switch t := v.(type) {
-	case int32, int64, uint, uint32, uint64:
-		return t.(int)
-	case string:
-		val, _ := strconv.Atoi(t)
-		return val
-	default:
-		return 0
-	}
-}
-
-func parseNumber(v interface{}) interface{} {
-	if isInteger(v) {
-		return toInt(v)
-	}
-	return toFloat64(v)
-}
-
-// Options are parse options.
-type Options struct {
-	// Bools are flags which should always be treated as bool
-	Bools []string
-	// Strings are flags which should always be treated as string
-	Strings []string
-	// Defaults are default values for flags.
-	Defaults map[string]interface{}
-	// Aliases are aliases for a flag
-	Aliases map[string][]string
-}
-
-// NewOptions creates an instance of Options.
-func NewOptions() *Options {
-	return &Options{}
-}
-
-// Alias adds an alias.
-func (o *Options) Alias(from string, to ...string) *Options {
-	if len(to) == 0 {
-		return o
-	}
-
-	if o.Aliases == nil {
-		o.Aliases = map[string][]string{}
-	}
-	o.Aliases[from] = to
-	return o
-}
-
 // Parse parses os.Args excluding os.Args[0].
-func Parse() *argv {
-	return parseArgs(os.Args[1:], nil)
+func Parse() ArgMap {
+	return ParseArgv(os.Args[1:])
 }
 
-// ParseArgs parses an argv for options.
-func parseArgs(argv []string, options *Options) *argv {
-	if options == nil {
-		options = &Options{}
-	}
-	bools := options.Bools
-	strings := options.Strings
-	defaults := options.Defaults
-	aliases := options.Aliases
+// ParseArgv parses an argv for options.
+func ParseArgv(argv []string) ArgMap {
+	leftover := []string{}
 
-	inBools := func(key string) bool {
-		return sliceContains(bools, key)
-	}
-
-	leftover := []interface{}{}
 	result := map[string]interface{}{
-		"_": leftover,
+		"_":  leftover,
+		"--": []string{},
 	}
 
 	setArg := func(key string, val interface{}) {
-		var keys []string
-		if aliases != nil {
-			if aka := aliases[key]; aka != nil {
-				keys = append(aka, key)
-			}
-		}
-
-		if keys == nil {
-			keys = []string{key}
-		}
-
-		for _, keyName := range keys {
-			if !sliceContains(strings, keyName) && isNumber(val) {
-				result[keyName] = parseNumber(val)
-				continue
-			}
-			result[keyName] = val
-		}
-
-	}
-
-	iifInStrings := func(key string, s string, v interface{}) interface{} {
-		if sliceContains(strings, key) {
-			return s
-		}
-		return v
+		result[key] = val
 	}
 
 	l := len(argv)
@@ -239,17 +115,14 @@ func parseArgs(argv []string, options *Options) *argv {
 			next := argsAt(i + 1)
 
 			if next == "" {
-				setArg(key, iifInStrings(key, "", true))
+				// --arg
+				setArg(key, true)
 			} else if next[0:1] == "-" {
-				setArg(key, iifInStrings(key, "", true))
-			} else if !sliceContains(bools, key) {
+				// --arg -o | --arg --other
+				setArg(key, true)
+			} else {
 				setArg(key, next)
 				i++
-			} else if next == "true" || next == "false" {
-				setArg(key, next == "true")
-				i++
-			} else {
-				setArg(key, true)
 			}
 		} else if shortFormRe.MatchString(arg) {
 			// -abc a, b are boolean c is undetermined
@@ -285,7 +158,7 @@ func parseArgs(argv []string, options *Options) *argv {
 					break
 				}
 
-				setArg(lettersAt(k), iifInStrings(lettersAt(k), "", true))
+				setArg(lettersAt(k), true)
 				k++
 			}
 
@@ -294,36 +167,21 @@ func parseArgs(argv []string, options *Options) *argv {
 
 				if i+1 < len(argv) {
 					nextArg := argv[i+1]
-					if !dashesRe.MatchString(nextArg) && !inBools(key) {
+					if !dashesRe.MatchString(nextArg) {
 						setArg(key, nextArg)
-						i++
-					} else if trueFalseRe.MatchString(argv[i+1]) {
-						setArg(key, nextArg == "true")
 						i++
 					}
 				} else {
-					setArg(key, iifInStrings(key, "", true))
+					setArg(key, true)
 				}
 			}
 		} else {
-			if str.IsNumeric(arg) {
-				leftover = append(leftover, parseNumber(arg))
-			} else {
-				leftover = append(leftover, arg)
-			}
+			leftover = append(leftover, arg)
 			result["_"] = leftover
 		}
 
 		i++
 	}
 
-	if defaults != nil {
-		for key := range defaults {
-			if result[key] == nil {
-				setArg(key, defaults[key])
-			}
-		}
-	}
-
-	return newFromMap(result)
+	return result
 }
