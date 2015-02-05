@@ -12,53 +12,61 @@ var emptyMap = map[string]interface{}{}
 func TestDoubleDash(t *testing.T) {
 	assert := assert.New(t)
 
+	// TODO
+	// must = required
+	// should = recommended
+	// may = optional
+
+	// MustBool("help", "h", "?")
+	// MayBool(false, "help", "h", "?")
+
 	// cmd --arg
-	res := ParseArgv([]string{"--arg"}, nil)
-	assert.Equal(true, res.MustBool("arg"))
+	res := ParseArgv([]string{"--arg"})
+	assert.Equal(true, res.MayBool(false, "arg"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd --arg   # arg in strings
-	res = ParseArgv([]string{"--arg"}, &Options{Strings: []string{"arg"}})
-	assert.Equal("", res.MustString("arg"))
+	res = ParseArgv([]string{"--arg"})
+	assert.Equal("true", res.MayString("", "arg"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd --arg 1
-	res = ParseArgv([]string{"--arg", "1"}, nil)
-	assert.Equal(1, res.MustInt("arg"))
+	res = ParseArgv([]string{"--arg", "1"})
+	assert.Equal(1, res.MayInt(100, "arg"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd --arg true
-	res = ParseArgv([]string{"--arg=true"}, nil)
+	res = ParseArgv([]string{"--arg=true"})
 	assert.Equal("true", res.MustString("arg"))
 	assert.Equal(0, len(res.Leftover()))
 
-	res = ParseArgv([]string{"--arg", "true"}, nil)
+	res = ParseArgv([]string{"--arg", "true"})
 	assert.Equal("true", res.MustString("arg"))
 	assert.Equal(0, len(res.Leftover()))
 
-	// cmd --arg 1 # arg in bools
-	res = ParseArgv([]string{"--arg", "1"}, &Options{Bools: []string{"arg"}})
-	assert.Equal(true, res.MustBool("arg"))
-	assert.Equal(1, res.Leftover()[0].(int))
+	// cmd --arg 1
+	res = ParseArgv([]string{"--arg", "0"})
+	assert.Equal(false, res.MustBool("arg"))
+	assert.Equal(0, len(res.Leftover()))
 
-	// cmd --arg true # arg in bools
-	res = ParseArgv([]string{"--arg", "true"}, &Options{Bools: []string{"arg"}})
-	assert.Equal(true, res.MustBool("arg"))
+	// cmd --arg false
+	res = ParseArgv([]string{"--arg", "false"})
+	assert.Equal(false, res.MustBool("arg"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd --arg -b
-	res = ParseArgv([]string{"--arg", "-b"}, nil)
+	res = ParseArgv([]string{"--arg", "-b"})
 	assert.Equal(true, res.MustBool("arg"))
 	assert.Equal(true, res.MustBool("b"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd --arg=1
-	res = ParseArgv([]string{"--arg=1"}, nil)
+	res = ParseArgv([]string{"--arg=1"})
 	assert.Equal(1, res.MustInt("arg"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd --arg1 --arg2
-	res = ParseArgv([]string{"--arg1", "--arg2"}, nil)
+	res = ParseArgv([]string{"--arg1", "--arg2"})
 	assert.Equal(true, res.MustBool("arg1"))
 	assert.Equal(true, res.MustBool("arg2"))
 }
@@ -67,51 +75,51 @@ func TestSingleDash(t *testing.T) {
 	assert := assert.New(t)
 
 	// cmd -a
-	res := ParseArgv([]string{"-a"}, nil)
+	res := ParseArgv([]string{"-a"})
 	assert.Equal(true, res.MustBool("a"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd -a foo
-	res = ParseArgv([]string{"-a", "foo"}, nil)
+	res = ParseArgv([]string{"-a", "foo"})
 	assert.Equal("foo", res.MustString("a"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd -a1.24
-	res = ParseArgv([]string{"-a1.24"}, nil)
+	res = ParseArgv([]string{"-a1.24"})
 	assert.Equal(1.24, res.MustFloat("a"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd -ab1
-	res = ParseArgv([]string{"-ab1"}, nil)
+	res = ParseArgv([]string{"-ab1"})
 	assert.Equal(true, res.MustBool("a"))
 	assert.Equal(1, res.MustInt("b"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// # cmd -a码农
-	res = ParseArgv([]string{"-a码农"}, nil)
+	res = ParseArgv([]string{"-a码农"})
 	assert.Equal("码农", res.MustString("a"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd -ab
-	res = ParseArgv([]string{"-ab"}, nil)
+	res = ParseArgv([]string{"-ab"})
 	assert.Equal(true, res.MustBool("a"))
 	assert.Equal(true, res.MustBool("b"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd -af test.py
-	res = ParseArgv([]string{"-af", "test.go"}, nil)
+	res = ParseArgv([]string{"-af", "test.go"})
 	assert.Equal(true, res.MustBool("a"))
 	assert.Equal("test.go", res.MustString("f"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// # cmd -af false  # f in bools
-	res = ParseArgv([]string{"-af", "false"}, &Options{Bools: []string{"f"}})
+	res = ParseArgv([]string{"-af", "false"})
 	assert.Equal(true, res.MustBool("a"))
 	assert.Equal(false, res.MustBool("f"))
 	assert.Equal(0, len(res.Leftover()))
 
 	// cmd -af -b  # f in bools
-	res = ParseArgv([]string{"-af", "-b"}, &Options{Bools: []string{"f"}})
+	res = ParseArgv([]string{"-af", "-b"})
 	assert.Equal(true, res.MustBool("a"))
 	assert.Equal(true, res.MustBool("f"))
 	assert.Equal(true, res.MustBool("b"))
@@ -122,13 +130,13 @@ func TestLeftover(t *testing.T) {
 	assert := assert.New(t)
 
 	// cmd a b
-	res := ParseArgv([]string{"a", "b"}, nil)
+	res := ParseArgv([]string{"a", "b"})
 	assert.Contains(res.Leftover(), "a")
 	assert.Contains(res.Leftover(), "b")
 	assert.Equal(2, len(res.Leftover()))
 
 	// cmd -a b c d
-	res = ParseArgv([]string{"-a", "b", "c", "d"}, nil)
+	res = ParseArgv([]string{"-a", "b", "c", "d"})
 	assert.Equal("b", res.MustString("a"))
 	assert.Contains(res.Leftover(), "c")
 	assert.Contains(res.Leftover(), "d")
@@ -140,7 +148,7 @@ func TestUnparsed(t *testing.T) {
 	assert := assert.New(t)
 
 	// cmd -a b c d -- -g --x
-	res := ParseArgv([]string{"-a", "b", "c", "d", "--", "-g", "--x"}, nil)
+	res := ParseArgv([]string{"-a", "b", "c", "d", "--", "-g", "--x"})
 	assert.Equal("b", res.MustString("a"))
 	assert.Contains(res.Leftover(), "c")
 	assert.Contains(res.Leftover(), "d")
@@ -150,14 +158,14 @@ func TestUnparsed(t *testing.T) {
 	assert.Equal(2, len(res.Unparsed()))
 
 	// cmd -z2 -- foo
-	res = ParseArgv([]string{"-z2", "--", "foo"}, nil)
+	res = ParseArgv([]string{"-z2", "--", "foo"})
 	assert.Equal(2, res.MustInt("z"))
 	assert.Equal(0, len(res.Leftover()))
 	assert.Contains(res.Unparsed(), "foo")
 	assert.Equal(1, len(res.Unparsed()))
 
 	// cmd -z2 # no unparsed args
-	res = ParseArgv([]string{"-z2"}, nil)
+	res = ParseArgv([]string{"-z2"})
 	assert.Equal(0, len(res.Unparsed()))
 
 }
@@ -165,7 +173,7 @@ func TestUnparsed(t *testing.T) {
 func TestNegate(t *testing.T) {
 	assert := assert.New(t)
 	// cmd --no-input
-	res := ParseArgv([]string{"--no-input"}, nil)
+	res := ParseArgv([]string{"--no-input"})
 	assert.Equal(false, res.MustBool("input"))
 	assert.Equal(0, len(res.Leftover()))
 }
@@ -174,61 +182,71 @@ func TestDefaultsOption(t *testing.T) {
 	assert := assert.New(t)
 
 	// cmd -a2  # with a = 100 as default
-	res := ParseArgv([]string{"-a2"}, &Options{Defaults: map[string]interface{}{"a": 100}})
-	assert.Equal(2, res.MustInt("a"))
+	res := ParseArgv([]string{"-a2"})
+	assert.Equal(2, res.MayInt(100, "a"))
 	assert.Equal(0, len(res.Leftover()))
 
-	// cmd -a  # with b = 2 as default
-	res = ParseArgv([]string{"-a"}, &Options{Defaults: map[string]interface{}{"b": 2}})
+	// cmd -a
+	res = ParseArgv([]string{"-a"})
 	assert.Equal(true, res.MustBool("a"))
-	assert.Equal(2, res.MustInt("b"))
+	assert.Equal(2, res.MayInt(2, "b"))
 	assert.Equal(0, len(res.Leftover()))
 }
 
 func TestAliases(t *testing.T) {
 	assert := assert.New(t)
 
-	// cmd -a2  # with a = 100 as default
-	res := ParseArgv([]string{"-z2"}, NewOptions().Alias("z", "zm", "zoom"))
-	assert.Equal(2, res.MustInt("z"))
-	assert.Equal(2, res.MustInt("zm"))
-	assert.Equal(2, res.MustInt("zoom"))
+	// cmd -z2
+	res := ParseArgv([]string{"-z2"})
+	assert.Equal(2, res.MustInt("zoom", "zm", "z"))
+	assert.Equal(0, len(res.Leftover()))
+
+	res = ParseArgv([]string{"--zm", "3"})
+	assert.Equal(3, res.MustInt("zoom", "zm", "z"))
+	assert.Equal(0, len(res.Leftover()))
+
+	res = ParseArgv([]string{"--zoom", "4"})
+	assert.Equal(4, res.MustInt("zoom", "zm", "z"))
 	assert.Equal(0, len(res.Leftover()))
 }
 
-func TestSafeFuncs(t *testing.T) {
+func TestMayFuncs(t *testing.T) {
 	assert := assert.New(t)
 
 	// cmd -z2
-	res := ParseArgv([]string{"-z2"}, nil)
-	assert.Equal(2, res.SafeInt("zoom", "z", 100))
+	res := ParseArgv([]string{"-z2"})
+	assert.Equal(2, res.MayInt(100, "zoom", "z"))
 	assert.Equal(0, len(res.Leftover()))
 
-	res = ParseArgv([]string{"--zoom=2"}, nil)
-	assert.Equal(2, res.SafeInt("zoom", "z", 100))
+	res = ParseArgv([]string{"--zoom=2"})
+	assert.Equal(2, res.MayInt(100, "zoom", "z"))
 	assert.Equal(0, len(res.Leftover()))
 
-	res = ParseArgv([]string{"-z", "bird"}, nil)
-	assert.Equal("bird", res.SafeString("zoom", "z", "cat"))
+	res = ParseArgv([]string{"-z", "bird"})
+	assert.Equal("bird", res.MustString("zoom", "z"))
 	assert.Equal(0, len(res.Leftover()))
 
-	res = ParseArgv([]string{"--zoom=bird"}, nil)
-	assert.Equal("bird", res.SafeString("zoom", "z", "cat"))
+	res = ParseArgv([]string{"--zoom=bird"})
+	assert.Equal("bird", res.MustString("zoom", "z"))
 	assert.Equal(0, len(res.Leftover()))
 
-	res = ParseArgv([]string{"-z"}, nil)
-	assert.Equal(true, res.SafeBool("zoom", "z", false))
+	res = ParseArgv([]string{"-z"})
+	assert.Equal(true, res.MayBool(false, "zoom", "z"))
 	assert.Equal(0, len(res.Leftover()))
 
-	res = ParseArgv([]string{"--zoom"}, nil)
-	assert.Equal(true, res.SafeBool("zoom", "z", false))
+	res = ParseArgv([]string{"--zoom"})
+	assert.Equal(true, res.MayBool(false, "zoom", "z"))
 	assert.Equal(0, len(res.Leftover()))
 
-	res = ParseArgv([]string{"-z1.0"}, nil)
-	assert.Equal(1.0, res.SafeFloat("zoom", "z", 2.0))
+	res = ParseArgv([]string{"--zom"})
+	assert.Equal(false, res.MayBool(false, "zoom", "z"))
 	assert.Equal(0, len(res.Leftover()))
 
-	res = ParseArgv([]string{"--zoom=1.0"}, nil)
-	assert.Equal(1.0, res.SafeFloat("zoom", "z", 2.0))
+	res = ParseArgv([]string{"-z1.0"})
+	assert.Equal(1.0, res.MayFloat(2.0, "zoom", "z"))
+	assert.Equal(0, len(res.Leftover()))
+
+	res = ParseArgv([]string{"--zoom=1.0"})
+	assert.Equal(1.0, res.MayFloat(2.0, "zoom", "z"))
 	assert.Equal(0, len(res.Leftover()))
 }
