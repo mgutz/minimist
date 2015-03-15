@@ -3,8 +3,8 @@ package minimist
 // ArgMap is the result of parsing command-line arguments.
 type ArgMap map[string]interface{}
 
-// Leftover are arguments which were not parsed as flags before "--"
-func (am ArgMap) Leftover() []string {
+// Others are other args which were not parsed as flags before "--"
+func (am ArgMap) Others() []string {
 	return am["_"].([]string)
 }
 

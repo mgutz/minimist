@@ -1,6 +1,6 @@
 package main
 
-import . "gopkg.in/godo.v1"
+import . "github.com/mgutz/godo/v1"
 
 // Tasks is the entry point for Godo.
 func Tasks(p *Project) {

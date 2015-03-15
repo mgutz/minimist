@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/mgutz/minimist"
 )
@@ -18,13 +19,15 @@ Usage:
 
 func main() {
 	argm := minimist.Parse()
+	fmt.Printf("%q\n", os.Args)
+
 	// cmd --help || cmd --h || cmd -?
 	if argm.MayBool(false, "help", "h", "?") {
 		fmt.Println(usage)
 	}
 
 	// cmd -v || cmd --version
-	if argm.ZeroBool("v", "version") {
+	if argm.AsBool("v", "version") {
 		fmt.Println("1.0")
 	}
 

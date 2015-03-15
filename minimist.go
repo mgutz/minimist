@@ -13,11 +13,11 @@ func nextString(list []string, i int) *string {
 	return nil
 }
 
-func sliceContains(strings []string, needle string) bool {
-	if strings == nil {
+func sliceContains(slice []string, needle string) bool {
+	if slice == nil {
 		return false
 	}
-	for _, s := range strings {
+	for _, s := range slice {
 		if s == needle {
 			return true
 		}
@@ -60,10 +60,10 @@ func Parse() ArgMap {
 
 // ParseArgv parses an argv for options.
 func ParseArgv(argv []string) ArgMap {
-	leftover := []string{}
+	others := []string{}
 
 	result := map[string]interface{}{
-		"_":  leftover,
+		"_":  others,
 		"--": []string{},
 	}
 
@@ -176,8 +176,8 @@ func ParseArgv(argv []string) ArgMap {
 				}
 			}
 		} else {
-			leftover = append(leftover, arg)
-			result["_"] = leftover
+			others = append(others, arg)
+			result["_"] = others
 		}
 
 		i++

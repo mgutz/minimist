@@ -2,6 +2,13 @@ package minimist
 
 import "github.com/mgutz/to"
 
+// Leftover is an alias for Other and is deprecated. USE Others() instead.
+func (am ArgMap) Leftover() []string {
+	return am["_"].([]string)
+}
+
+//// USE As* functions instead. eg AsBool, AsInt
+
 // ZeroBool tries to convert any of related aliases to bool
 func (am ArgMap) ZeroBool(aliases ...string) bool {
 	for _, key := range aliases {
