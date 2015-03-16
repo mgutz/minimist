@@ -60,10 +60,10 @@ func Parse() ArgMap {
 
 // ParseArgv parses an argv for options.
 func ParseArgv(argv []string) ArgMap {
-	others := []string{}
+	rest := []string{}
 
 	result := map[string]interface{}{
-		"_":  others,
+		"_":  rest,
 		"--": []string{},
 	}
 
@@ -176,8 +176,8 @@ func ParseArgv(argv []string) ArgMap {
 				}
 			}
 		} else {
-			others = append(others, arg)
-			result["_"] = others
+			rest = append(rest, arg)
+			result["_"] = rest
 		}
 
 		i++
